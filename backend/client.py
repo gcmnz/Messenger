@@ -59,32 +59,9 @@ class Client:
                     self.__connection_status = False
 
                 self.__server.send(self.__sent_message.bytes())
-
                 self.__sent_message.update(self.__PKT_HEARTBEAT)
-                self.__received_message.update(self.__server.recv(self.__received_message.BUFFER_SIZE))
 
-                message = self.__received_message.bytes()
-
-                if message[0] == self.__received_message.RESPONSE:
-                    if message[1] == self.__received_message.ACCOUNT:
-                        if message[2] == self.__received_message.CREATE:
-                            if message[3] == self.__received_message.SUCCESS:
-                                self.__backend.change_to_messaging()
-                            else:
-                                notification = self.__received_message.decode_responce_account_unsuccess()
-                                self.__backend.show_notification(notification)
-
-                        elif message[2] == self.__received_message.ENTER:
-                            if message[3] == self.__received_message.SUCCESS:
-                                self.__backend.change_to_messaging()
-                            else:
-                                notification = self.__received_message.decode_responce_account_unsuccess()
-                                self.__backend.show_notification(notification)
-
-                    elif message[1] == self.__received_message.MESSAGE:
-                        if message[2] == self.__received_message.SEND:
-                            notification = self.__received_message.decode_responce_message_send()
-                            self.__backend.show_notification(notification)
+                self.__receiving_message_handle()
 
                 time.sleep(self.__sent_message.timeout())
 
@@ -93,6 +70,44 @@ class Client:
 
         time.sleep(Message.timeout())
         self.__server.close()
+
+    def __receiving_message_handle(self):
+        """
+        Обработка входящих пакетов
+        """
+        self.__received_message.update(self.__server.recv(self.__received_message.BUFFER_SIZE))
+        message = self.__received_message.bytes()
+
+        if message[0] == self.__received_message.RESPONSE:
+            if message[1] == self.__received_message.ACCOUNT:
+                if message[2] == self.__received_message.CREATE:
+                    if message[3] == self.__received_message.SUCCESS:
+                        self.__backend.change_to_messaging()
+                    else:
+                        notification = self.__received_message.decode_responce_account_unsuccess()
+                        self.__backend.show_notification(notification)
+
+                elif message[2] == self.__received_message.ENTER:
+                    if message[3] == self.__received_message.SUCCESS:
+                        self.__backend.change_to_messaging()
+                    else:
+                        notification = self.__received_message.decode_responce_account_unsuccess()
+                        self.__backend.show_notification(notification)
+
+            elif message[1] == self.__received_message.MESSAGE:
+                if message[2] == self.__received_message.SEND:
+                    notification = self.__received_message.decode_responce_message_send()
+                    self.__backend.show_notification(notification)
+
+                elif message[2] == self.__received_message.RECEIVE:  # Это сообщение сервер отправил без очереди
+                    sender_lenght = message[3]
+
+                    sender: str = message[4:4+sender_lenght].decode('utf-8')
+                    message_text: str = message[4+sender_lenght:].decode('utf-8')
+
+                    print(sender, message_text)
+
+                    self.__receiving_message_handle()  # снова читаем пакет, чтобы соблюсти очередность
 
     def create_account(self, login: str, password: str) -> None:
         """

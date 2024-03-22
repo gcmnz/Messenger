@@ -164,3 +164,4 @@ config.json
 backend/server/Accounts.db
 backend/server/Messages.db
 backend/server/online_users.json
+test

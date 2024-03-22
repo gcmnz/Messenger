@@ -60,8 +60,8 @@ class AccountDatabase(Database):
     """
     Класс для управления базой с аккаутами
     """
-    def __init__(self, filename: str) -> None:
-        super().__init__(filename)
+    def __init__(self) -> None:
+        super().__init__('accounts.db')
 
     def add_user(self, login: str, password: str) -> None:
         """
@@ -103,8 +103,8 @@ class MessageDatabase(Database):
     """
     Класс для управления базой с сообщениями
     """
-    def __init__(self, filename: str) -> None:
-        super().__init__(filename)
+    def __init__(self) -> None:
+        super().__init__('messages.db')
 
     def __is_table_exists(self, sender: str, receiver: str) -> int:
         """
@@ -147,4 +147,4 @@ class MessageDatabase(Database):
 
 
 if __name__ == '__main__':
-    database = Database('your_database.db')
+    database = AccountDatabase()

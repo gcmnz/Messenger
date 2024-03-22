@@ -31,15 +31,20 @@ class Server:
         bytearray([0x03, 0x02, 0x03, 0x00, 0x07]))
     __PKT_RESPONCE_MESSAGE_SEND_SENDED = (
         bytearray([0x03, 0x02, 0x03, 0x01, 0x08]))
+    __PKT_RESPONCE_MESSAGE_RECEIVE = (
+        bytearray([0x03, 0x02, 0x04])
+    )
 
     def __init__(self, host: str, port: int) -> None:
-        self.__HOST = host
-        self.__PORT = port
-        self.__starting = False
-        self.__server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # TCP
+        self.__HOST: str = host
+        self.__PORT: int = port
+        self.__starting: bool = False
+        self.__server: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # TCP
 
-        self.__accounts_database = AccountDatabase('Accounts.db')
-        self.__messages_database = MessageDatabase('Messages.db')
+        self.__accounts_database = AccountDatabase()
+        self.__messages_database = MessageDatabase()
+
+        self.__online_users: dict = {}
 
     def __del__(self) -> None:
         self.stop()
@@ -91,6 +96,8 @@ class Server:
                         if success:
                             self.__accounts_database.add_user(login, password)
                             sent_message.update(self.__PKT_RESPONCE_ACCOUNT_CREATE_SUCCESS_CREATED)
+                            current_login = login
+                            self.__online_users[login] = client
                         else:
                             sent_message.update(self.__PKT_RESPONCE_ACCOUNT_CREATE_FAIL_ALREADY_EXISTS)
 
@@ -100,6 +107,7 @@ class Server:
                         if success == 2:
                             sent_message.update(self.__PKT_RESPONCE_ACCOUNT_ENTER_SUCCESS_PASSED)
                             current_login = login
+                            self.__online_users[login] = client
                         elif success == 1:
                             sent_message.update(self.__PKT_RESPONCE_ACCOUNT_ENTER_FAIL_INVALID_PASSWORD)
                         elif success == 0:
@@ -117,8 +125,25 @@ class Server:
                         self.__messages_database.add_message(sender, receiver, message_)
                         sent_message.update(self.__PKT_RESPONCE_MESSAGE_SEND_SENDED)
 
+                        # if receiver in self.__online_users:
+                        #     msg = Message(self.__PKT_RESPONCE_MESSAGE_RECEIVE)
+                        #     msg.encode_responce_message_receive(sender, message_)
+                        #
+                        #     self.__online_users[receiver].send(msg.bytes())
+
+                        # todo remove
+                        msg = Message(self.__PKT_RESPONCE_MESSAGE_RECEIVE)
+                        msg.encode_responce_message_receive(sender, message_)
+
+                        self.__online_users[sender].send(msg.bytes())
+                        # todo remove
+
             elif message[0] == received_message.CLOSE:
                 user_connected = False
+
+                if current_login in self.__online_users:
+                    del self.__online_users[current_login]
+
                 print(f'{addr} Disconnected!')
 
             client.send(sent_message.bytes())

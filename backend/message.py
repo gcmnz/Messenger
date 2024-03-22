@@ -1,6 +1,6 @@
 
 class Message:
-    __TIMEOUT = 0.1
+    __TIMEOUT = 5
     BUFFER_SIZE = 290
 
     # 1 byte - type
@@ -17,6 +17,7 @@ class Message:
     CREATE = 1
     ENTER = 2
     SEND = 3
+    RECEIVE = 4
 
     # 4 byte - status
     SUCCESS = 1
@@ -67,7 +68,7 @@ class Message:
         if pkt[4] == 1:
             return 'Аккаунт уже существует'
         elif pkt[4] == 2:
-            return 'Неверный логин'
+            return 'Такого аккаунта не существует'
         elif pkt[4] == 3:
             return 'Неверный пароль'
 
@@ -92,6 +93,14 @@ class Message:
                 return 'Нельзя отправить себе'
             elif pkt[4] == self.RECEIVER_DOESNT_EXISTS:
                 return 'Получателя не существует'
+
+    def encode_responce_message_receive(self, sender: str, message: str) -> None:
+        """
+        Метод для кодировки сообщения об отправителе и тексте сообщения для передачи клиенту получателя
+        """
+        pkt = self.__packet
+        sender_length = int.to_bytes(len(sender), 1, byteorder='little')
+        self.__packet = pkt + sender_length + sender.encode('utf-8') + message.encode('utf-8')
 
     @classmethod
     def timeout(cls):

@@ -19,7 +19,7 @@ class Database:
     def create_table(self, *args) -> None:
         """
         usage: create_table(table_name, column_names ...)
-        example: create_table('Accounts', 'login', 'password', 'online_status')
+        example: create_table('accounts', 'login', 'password', 'online_status')
         """
         # открываем базу
         with self.connection:
@@ -48,6 +48,11 @@ class Database:
         with self.connection:
             self.cursor.execute(f'DROP TABLE {table_name};')
 
+    def get_table_content(self, table_name: str):
+        with self.connection:
+            self.cursor.execute(f"SELECT * FROM {table_name}")
+            return self.cursor.fetchall()
+
     @staticmethod
     def create_password_hash(password: str) -> str:
         """
@@ -61,7 +66,7 @@ class AccountDatabase(Database):
     Класс для управления базой с аккаутами
     """
     def __init__(self) -> None:
-        super().__init__('accounts.db')
+        super().__init__('databases/accounts.db')
 
     def add_user(self, login: str, password: str) -> None:
         """
@@ -69,7 +74,7 @@ class AccountDatabase(Database):
         """
         password = self.create_password_hash(password)
         with self.connection:
-            self.connection.execute('INSERT INTO Accounts (Login, Password) VALUES (?, ?)', (login, password))
+            self.connection.execute('INSERT INTO accounts (login, password) VALUES (?, ?)', (login, password))
             self.connection.commit()
 
     def remove_user(self, login: str) -> None:
@@ -77,14 +82,14 @@ class AccountDatabase(Database):
         Удаление аккаунта
         """
         with self.connection:
-            self.connection.execute('DELETE FROM Accounts WHERE Login = ?', (login,))
+            self.connection.execute('DELETE FROM accounts WHERE Login = ?', (login,))
             self.connection.commit()
 
     def check_login_exists(self, login: str) -> bool:
         """
         Проверка на существование аккаунта
         """
-        self.cursor.execute('SELECT * FROM Accounts WHERE Login=?', (login,))
+        self.cursor.execute('SELECT * FROM accounts WHERE login=?', (login,))
         return bool(self.cursor.fetchone())
 
     def check_account_password(self, login: str, password: str) -> int:
@@ -92,7 +97,7 @@ class AccountDatabase(Database):
         Проверка для проверки пароля
         """
         if self.check_login_exists(login):
-            self.cursor.execute('SELECT password FROM Accounts WHERE Login=?', (login,))
+            self.cursor.execute('SELECT password FROM accounts WHERE login=?', (login,))
             if self.cursor.fetchone()[0] == self.create_password_hash(password):
                 return 2
             return 1
@@ -104,7 +109,7 @@ class MessageDatabase(Database):
     Класс для управления базой с сообщениями
     """
     def __init__(self) -> None:
-        super().__init__('messages.db')
+        super().__init__('databases/messages.db')
 
     def __is_table_exists(self, sender: str, receiver: str) -> int:
         """
@@ -145,6 +150,28 @@ class MessageDatabase(Database):
                 self.cursor.execute(f'INSERT INTO "{sender}_{receiver}" (is_sender, message, date, time) VALUES (?, ?, ?, ?)',
                                     (1, message, date, time_))
 
+    def get_all_messages_for(self, login: str) -> dict:
+        """
+        Получение из базы всех переписок с пользователями от login
+        """
+        with self.connection:
+            all_tables_fetch = self.cursor.execute("SELECT name FROM sqlite_master WHERE type='table';").fetchall()
+            all_tables = [table[0] for table in all_tables_fetch]
+            tables = [table for table in all_tables if login in table]
+            result: dict = {}
+
+            # Вывод содержимого таблиц, содержащих 'sender' в названии
+            for table in tables:
+                interlocutor = table.replace(login, '').replace('_', '')
+                content = self.get_table_content(table)
+
+                result[interlocutor] = content
+
+            return result
+
 
 if __name__ == '__main__':
-    database = AccountDatabase()
+    # database = AccountDatabase()
+    database = MessageDatabase()
+    dct = database.get_all_messages_for('slavique')
+    print(dct)

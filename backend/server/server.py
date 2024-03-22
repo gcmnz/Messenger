@@ -1,3 +1,4 @@
+import pickle
 import socket
 import threading
 
@@ -33,6 +34,9 @@ class Server:
         bytearray([0x03, 0x02, 0x03, 0x01, 0x08]))
     __PKT_RESPONCE_MESSAGE_RECEIVE = (
         bytearray([0x03, 0x02, 0x04])
+    )
+    __PKT_RESPONCE_MESSAGE_GETALL = (
+        bytearray([0x03, 0x02, 0x05])
     )
 
     def __init__(self, host: str, port: int) -> None:
@@ -114,29 +118,53 @@ class Server:
                             sent_message.update(self.__PKT_RESPONCE_ACCOUNT_ENTER_FAIL_INVALID_LOGIN)
 
                 elif message[1] == received_message.MESSAGE:
-                    receiver, message_ = received_message.decode_request_message()
+                    if message[2] == received_message.SEND:
+                        receiver, message_ = received_message.decode_request_message()
 
-                    if not self.__accounts_database.check_login_exists(receiver):  # Если аккаунта получателя не существует
-                        sent_message.update(self.__PKT_RESPONCE_MESSAGE_SEND_FAIL_RECEIVER_DOESNT_EXISTS)
-                    elif receiver == current_login:  # Пытаемся отправить себе
-                        sent_message.update(self.__PKT_RESPONCE_MESSAGE_SEND_FAIL_SEND_TO_SELF)
-                    else:
-                        sender = current_login
-                        self.__messages_database.add_message(sender, receiver, message_)
-                        sent_message.update(self.__PKT_RESPONCE_MESSAGE_SEND_SENDED)
+                        if not self.__accounts_database.check_login_exists(receiver):  # Если аккаунта получателя не существует
+                            sent_message.update(self.__PKT_RESPONCE_MESSAGE_SEND_FAIL_RECEIVER_DOESNT_EXISTS)
+                        elif receiver == current_login:  # Пытаемся отправить себе
+                            sent_message.update(self.__PKT_RESPONCE_MESSAGE_SEND_FAIL_SEND_TO_SELF)
+                        else:
+                            sender = current_login
+                            self.__messages_database.add_message(sender, receiver, message_)
+                            sent_message.update(self.__PKT_RESPONCE_MESSAGE_SEND_SENDED)
 
-                        # if receiver in self.__online_users:
-                        #     msg = Message(self.__PKT_RESPONCE_MESSAGE_RECEIVE)
-                        #     msg.encode_responce_message_receive(sender, message_)
-                        #
-                        #     self.__online_users[receiver].send(msg.bytes())
+                            # if receiver in self.__online_users:
+                            #     msg = Message(self.__PKT_RESPONCE_MESSAGE_RECEIVE)
+                            #     msg.encode_responce_message_receive(sender, message_)
+                            #
+                            #     self.__online_users[receiver].send(msg.bytes())
 
-                        # todo remove
-                        msg = Message(self.__PKT_RESPONCE_MESSAGE_RECEIVE)
-                        msg.encode_responce_message_receive(sender, message_)
+                            # todo remove
+                            msg = Message(self.__PKT_RESPONCE_MESSAGE_RECEIVE)
+                            msg.encode_responce_message_receive(sender, message_)
 
-                        self.__online_users[sender].send(msg.bytes())
-                        # todo remove
+                            self.__online_users[sender].send(msg.bytes())
+                            # todo remove
+
+                    elif message[2] == received_message.GETALL:
+                        data_dict = self.__messages_database.get_all_messages_for(current_login)
+                        payload = bytearray(pickle.dumps(data_dict))
+
+                        # Подготовка заголовка
+                        msg_pkt = self.__PKT_RESPONCE_MESSAGE_GETALL
+
+                        # Расчет количества частей
+                        parts_count = len(payload) // (Message.BUFFER_SIZE - len(msg_pkt) - 3) + 1
+                        parts_ct = bytearray(parts_count.to_bytes(3, byteorder='little'))
+
+                        pkt = msg_pkt + parts_ct
+
+                        result_packet = bytearray()
+                        result_payload = bytearray()
+
+                        for i in range(parts_count):
+                            pl = payload[i * (Message.BUFFER_SIZE - 6):(i + 1) * (Message.BUFFER_SIZE - 6)]
+                            packet = (pkt + pl)
+                            result_packet += packet
+                            result_payload += pl
+                            client.send(packet)
 
             elif message[0] == received_message.CLOSE:
                 user_connected = False

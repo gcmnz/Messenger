@@ -1,6 +1,7 @@
 import socket
 import threading
 import time
+import pickle
 
 from .message import Message
 
@@ -14,7 +15,8 @@ class Client:
     __PKT_REQUEST_ACCOUNT_ENTER = bytearray([0x02, 0x01, 0x02])
 
     # Message
-    __PKT_REQUEST_MESSAGE_SEND = bytearray([0x02, 0x02])
+    __PKT_REQUEST_MESSAGE_SEND = bytearray([0x02, 0x02, 0x03])
+    __PKT_REQUEST_MESSAGE_GETALL = bytearray([0x02, 0x02, 0x05])
 
     def __init__(self, backend, host: str, port: int) -> None:
         self.__backend = backend
@@ -25,6 +27,7 @@ class Client:
 
         self.__sent_message = Message(self.__PKT_HEARTBEAT)
         self.__received_message = Message()
+        self.__all_messages = ([])
 
     def connect(self) -> None:
         """
@@ -71,43 +74,61 @@ class Client:
         time.sleep(Message.timeout())
         self.__server.close()
 
-    def __receiving_message_handle(self):
+    def __receiving_message_handle(self) -> None:
         """
         Обработка входящих пакетов
         """
         self.__received_message.update(self.__server.recv(self.__received_message.BUFFER_SIZE))
+        recv_message = self.__received_message
         message = self.__received_message.bytes()
 
-        if message[0] == self.__received_message.RESPONSE:
-            if message[1] == self.__received_message.ACCOUNT:
-                if message[2] == self.__received_message.CREATE:
-                    if message[3] == self.__received_message.SUCCESS:
+        if message[0] == recv_message.RESPONSE:
+            if message[1] == recv_message.ACCOUNT:
+                if message[2] == recv_message.CREATE:
+                    if message[3] == recv_message.SUCCESS:
                         self.__backend.change_to_messaging()
                     else:
-                        notification = self.__received_message.decode_responce_account_unsuccess()
+                        notification = recv_message.decode_responce_account_unsuccess()
                         self.__backend.show_notification(notification)
 
-                elif message[2] == self.__received_message.ENTER:
-                    if message[3] == self.__received_message.SUCCESS:
+                elif message[2] == recv_message.ENTER:
+                    if message[3] == recv_message.SUCCESS:
                         self.__backend.change_to_messaging()
                     else:
-                        notification = self.__received_message.decode_responce_account_unsuccess()
+                        notification = recv_message.decode_responce_account_unsuccess()
                         self.__backend.show_notification(notification)
 
-            elif message[1] == self.__received_message.MESSAGE:
-                if message[2] == self.__received_message.SEND:
-                    notification = self.__received_message.decode_responce_message_send()
+            elif message[1] == recv_message.MESSAGE:
+                if message[2] == recv_message.SEND:
+                    notification = recv_message.decode_responce_message_send()
                     self.__backend.show_notification(notification)
 
-                elif message[2] == self.__received_message.RECEIVE:  # Это сообщение сервер отправил без очереди
+                elif message[2] == recv_message.RECEIVE:  # Это сообщение сервер отправил без очереди
                     sender_lenght = message[3]
 
                     sender: str = message[4:4+sender_lenght].decode('utf-8')
                     message_text: str = message[4+sender_lenght:].decode('utf-8')
 
-                    print(sender, message_text)
+                    print(f'Получено сообщение от: {sender}: {message_text}')
 
                     self.__receiving_message_handle()  # снова читаем пакет, чтобы соблюсти очередность
+
+                elif message[2] == recv_message.GETALL:
+                    res = bytearray()
+
+                    data = recv_message.bytes()
+
+                    parts_count = int.from_bytes(data[3:6], byteorder='little')
+
+                    payload = data[6:]
+                    res += payload
+
+                    for i in range(parts_count - 1):
+                        data = bytearray(self.__server.recv(Message.BUFFER_SIZE))
+                        payload = data[6:]
+                        res += payload
+
+                    self.__backend.load_messages_from_server(pickle.loads(res))
 
     def create_account(self, login: str, password: str) -> None:
         """
@@ -145,8 +166,13 @@ class Client:
         message_text = bytearray(message.encode('utf-8'))
 
         pkt = self.__PKT_REQUEST_MESSAGE_SEND + receiver_length + receiver_text + message_text
-
         self.__sent_message.update(pkt)
+
+    def send_load_messages_request(self):
+        """
+        Метод для формирования пакета с запросом о получении сообщений
+        """
+        self.__sent_message.update(self.__PKT_REQUEST_MESSAGE_GETALL)
 
     def is_connected(self) -> bool:
         """

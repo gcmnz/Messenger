@@ -1,7 +1,7 @@
 
 class Message:
-    __TIMEOUT = 5
-    BUFFER_SIZE = 290
+    __TIMEOUT = 0.1
+    BUFFER_SIZE = 512
 
     # 1 byte - type
     HEARTBEAT = 1
@@ -18,6 +18,7 @@ class Message:
     ENTER = 2
     SEND = 3
     RECEIVE = 4
+    GETALL = 5
 
     # 4 byte - status
     SUCCESS = 1
@@ -77,10 +78,10 @@ class Message:
         Метод для вывода результата отправки сообщения
         """
         pkt = self.__packet
-        receiver_length = pkt[2]
+        receiver_length = pkt[3]
 
-        receiver = pkt[3: 3 + receiver_length].decode('utf-8')
-        message = pkt[3 + receiver_length:].decode('utf-8')
+        receiver = pkt[4: 4 + receiver_length].decode('utf-8')
+        message = pkt[4 + receiver_length:].decode('utf-8')
 
         return receiver, message
 

@@ -38,10 +38,10 @@ AUTHORIZATION_STYLE = """
 """
 
 MESSAGING_STYLE = """
-    ListMessages {
-        border: transparent;
-    }
+    
+"""
 
+MESSAGING_STYLEs = """
     ListMessages::item {
         padding:  10px;
         border-bottom:  1px solid #ccc;
@@ -51,4 +51,15 @@ MESSAGING_STYLE = """
         background: lightblue;
         color: white;
     }
+
+    ListInterlocutor::item {
+        padding:  10px;
+        border-bottom:  1px solid #ccc;
+    }
+
+    ListInterlocutor::item:selected {
+        background: lightblue;
+        color: white;
+    }
+    
 """

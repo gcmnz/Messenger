@@ -1,7 +1,7 @@
-from PyQt5.QtWidgets import QListWidget
+from PyQt5.QtWidgets import QListWidget, QListWidgetItem
 
 
-class ListReceivers(QListWidget):
+class ListInterlocutor(QListWidget):
     def __init__(self):
         super().__init__()
 
@@ -9,3 +9,8 @@ class ListReceivers(QListWidget):
 class ListMessages(QListWidget):
     def __init__(self):
         super().__init__()
+
+
+class ListItem(QListWidgetItem):
+    def __init__(self, text: str):
+        super().__init__(text)

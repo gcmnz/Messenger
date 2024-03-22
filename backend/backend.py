@@ -1,6 +1,7 @@
 import json
 
 from .client import Client
+from GUI.custom_widget.list import ListItem
 
 
 def check_connection_status_without_hide(func: staticmethod):
@@ -68,6 +69,7 @@ class Backend:
         """
         Для переключения на виджет общения
         """
+        self.__window.messaging_widget.load_messages()
         self.__window.stacked_widget.setCurrentWidget(self.__window.messaging_widget)
         self.__current_widget = self.__window.messaging_widget
 
@@ -101,13 +103,30 @@ class Backend:
         """
         Метод для отправки запроса с получателем и текстом сообщения на сервер
         """
+        print(123)
         receiver = self.__window.messaging_widget.receiver.text()
         message = self.__window.messaging_widget.message.text()
 
         if receiver and message:
             self.client.send_message(receiver, message)
 
-    def show_notification(self, text='Connection lost') -> None:
+    @check_connection_status_without_hide
+    def load_all_messages(self) -> None:
+        """
+        Вызов запроса на получение всех сообщений из базы
+        """
+        self.client.send_load_messages_request()
+
+    def load_messages_from_server(self, messages: dict):
+        for interlocutor in messages:
+            item = ListItem(interlocutor)
+            msg_item = ListItem(interlocutor)
+            self.__window.messaging_widget.list_interlocutor.addItem(item)
+            self.__window.messaging_widget.list_messages.addItem(msg_item)
+            # for message in messages[interlocutor]:
+            #     print(message)
+
+    def show_notification(self, text: str = 'Connection lost') -> None:
         """
         Метод для отображения уведомления на текущем виджете
         """

@@ -1,5 +1,5 @@
-# from GUI.custom_widget.list import ListMessages, ListReceivers
-from PyQt5.QtWidgets import QWidget, QHBoxLayout, QSplitter, QVBoxLayout, QLineEdit, QLabel
+from GUI.custom_widget.list import ListMessages, ListInterlocutor
+from PyQt5.QtWidgets import QWidget, QHBoxLayout, QSplitter, QLineEdit
 from GUI.custom_widget.label import AuthorizationLabel
 from GUI.custom_widget.button import AuthorizationButton
 from PyQt5.Qt import Qt
@@ -9,19 +9,16 @@ class Messaging(QWidget):
     def __init__(self, backend):
         super().__init__()
 
-        # todo remove
         self.__backend = backend
-        # todo remove
 
-        # self.receivers = ListReceivers()
-        # self.messages = ListMessages()
-        #
-        # self.__layout = QHBoxLayout()
-        # self.__splitter = QSplitter(Qt.Horizontal)
-        # self.__splitter.addWidget(self.receivers)
-        # self.__splitter.addWidget(self.messages)
-        # self.__layout.addWidget(self.__splitter)
-        # self.setLayout(self.__layout)
+        self.list_interlocutor = ListInterlocutor()
+        self.list_messages = ListMessages()
+
+        self.__layout = QHBoxLayout()
+        self.__splitter = QSplitter(Qt.Horizontal)
+        self.__splitter.addWidget(self.list_interlocutor)
+        self.__splitter.addWidget(self.list_messages)
+        self.__layout.addWidget(self.__splitter)
 
         self.receiver = QLineEdit()
         self.receiver.setPlaceholderText('receiver')
@@ -33,14 +30,17 @@ class Messaging(QWidget):
 
         self.notification = AuthorizationLabel()
 
-        self.__layout = QVBoxLayout()
-        self.__layout.addWidget(self.receiver)
-        self.__layout.addWidget(self.message)
-        self.__layout.addWidget(self.send_btn)
-        self.__layout.addWidget(self.notification)
-        self.__layout.setAlignment(Qt.AlignCenter)
+        # self.__layout = QVBoxLayout()
+        # self.__layout.addWidget(self.receiver)
+        # self.__layout.addWidget(self.message)
+        # self.__layout.addWidget(self.send_btn)
+        # self.__layout.addWidget(self.notification)
+        # self.__layout.setAlignment(Qt.AlignCenter)
 
         self.setLayout(self.__layout)
+
+    def load_messages(self):
+        self.__backend.load_all_messages()
 
     # todo remove
     def keyPressEvent(self, event):

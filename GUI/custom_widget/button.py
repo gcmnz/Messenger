@@ -4,7 +4,7 @@ from PyQt5.Qt import Qt
 
 class AuthorizationButton(QPushButton):
     def __init__(self, widget, text: str, func: staticmethod) -> None:
-        super().__init__(widget)
+        super().__init__()
 
         self.__widget = widget
         self.setText(text)

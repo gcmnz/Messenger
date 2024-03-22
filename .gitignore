@@ -161,7 +161,6 @@ cython_debug/
 
 # Project
 config.json
-backend/server/Accounts.db
-backend/server/Messages.db
+backend/server/databases
 backend/server/online_users.json
 test

@@ -160,11 +160,10 @@ class MessageDatabase(Database):
             tables = [table for table in all_tables if login in table]
             result: dict = {}
 
-            # Вывод содержимого таблиц, содержащих 'sender' в названии
             for table in tables:
                 interlocutor = table.replace(login, '').replace('_', '')
                 content = self.get_table_content(table)
-
+                content.append(int(login == table.split('_')[0]))
                 result[interlocutor] = content
 
             return result

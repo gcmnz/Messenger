@@ -10,11 +10,11 @@ class Registration(QWidget):
     def __init__(self, backend) -> None:
         super().__init__()
 
-        self.login = AuthorizationTextField(self, 'Login')
-        self.password = AuthorizationTextField(self, 'Password')
+        self.login = AuthorizationTextField('Login')
+        self.password = AuthorizationTextField('Password')
 
-        self.enter = AuthorizationButton(self, 'Sign up', backend.create_account_button_func)
-        self.create_account_button = AuthorizationButton(self, 'Have account', backend.change_to_authorization)
+        self.enter = AuthorizationButton('Sign up', backend.create_account_button_func)
+        self.create_account_button = AuthorizationButton('Have account', backend.change_to_authorization)
 
         self.notification = AuthorizationLabel()
 

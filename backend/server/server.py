@@ -130,18 +130,11 @@ class Server:
                             self.__messages_database.add_message(sender, receiver, message_)
                             sent_message.update(self.__PKT_RESPONCE_MESSAGE_SEND_SENDED)
 
-                            # if receiver in self.__online_users:
-                            #     msg = Message(self.__PKT_RESPONCE_MESSAGE_RECEIVE)
-                            #     msg.encode_responce_message_receive(sender, message_)
-                            #
-                            #     self.__online_users[receiver].send(msg.bytes())
+                            if receiver in self.__online_users:
+                                msg = Message(self.__PKT_RESPONCE_MESSAGE_RECEIVE)
+                                msg.encode_responce_message_receive(sender, message_)
 
-                            # todo remove
-                            msg = Message(self.__PKT_RESPONCE_MESSAGE_RECEIVE)
-                            msg.encode_responce_message_receive(sender, message_)
-
-                            self.__online_users[sender].send(msg.bytes())
-                            # todo remove
+                                self.__online_users[receiver].send(msg.bytes())
 
                     elif message[2] == received_message.GETALL:
                         data_dict = self.__messages_database.get_all_messages_for(current_login)

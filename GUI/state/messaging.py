@@ -1,8 +1,8 @@
-from GUI.custom_widget.list import ListMessages, ListInterlocutor
-from PyQt5.QtWidgets import QWidget, QHBoxLayout, QSplitter, QLineEdit
-from GUI.custom_widget.label import AuthorizationLabel
-from GUI.custom_widget.button import AuthorizationButton
+from PyQt5.QtWidgets import QWidget, QHBoxLayout, QSplitter
 from PyQt5.Qt import Qt
+
+from GUI.custom_widget.messages_widget import MessagesWidget
+from GUI.custom_widget.interlocutors_widget import InterlocutorsWidget
 
 
 class Messaging(QWidget):
@@ -11,36 +11,24 @@ class Messaging(QWidget):
 
         self.__backend = backend
 
-        self.list_interlocutor = ListInterlocutor()
-        self.list_messages = ListMessages()
+        self.interlocutors_widget = InterlocutorsWidget(self.__backend)
+        self.messages_widget = MessagesWidget(self.__backend)
+
+        self.__splitter = QSplitter(Qt.Horizontal)
+        self.__splitter.addWidget(self.interlocutors_widget)
+        self.__splitter.addWidget(self.messages_widget)
+        self.__splitter.setStretchFactor(1, 1)
 
         self.__layout = QHBoxLayout()
-        self.__splitter = QSplitter(Qt.Horizontal)
-        self.__splitter.addWidget(self.list_interlocutor)
-        self.__splitter.addWidget(self.list_messages)
         self.__layout.addWidget(self.__splitter)
-
-        self.receiver = QLineEdit()
-        self.receiver.setPlaceholderText('receiver')
-
-        self.message = QLineEdit()
-        self.message.setPlaceholderText('message')
-
-        self.send_btn = AuthorizationButton(self, 'Send', self.__backend.send_message_button_func)
-
-        self.notification = AuthorizationLabel()
-
-        # self.__layout = QVBoxLayout()
-        # self.__layout.addWidget(self.receiver)
-        # self.__layout.addWidget(self.message)
-        # self.__layout.addWidget(self.send_btn)
-        # self.__layout.addWidget(self.notification)
-        # self.__layout.setAlignment(Qt.AlignCenter)
 
         self.setLayout(self.__layout)
 
     def load_messages(self):
         self.__backend.load_all_messages()
+
+    def on_message_received(self, sender: str, message: str):
+        print(f'Получено сообщение от: {sender}: {message}')
 
     # todo remove
     def keyPressEvent(self, event):

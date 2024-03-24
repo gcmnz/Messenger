@@ -100,8 +100,7 @@ class Client:
 
             elif message[1] == recv_message.MESSAGE:
                 if message[2] == recv_message.SEND:
-                    notification = recv_message.decode_responce_message_send()
-                    self.__backend.show_notification(notification)
+                    pass
 
                 elif message[2] == recv_message.RECEIVE:  # Это сообщение сервер отправил без очереди
                     sender_lenght = message[3]
@@ -109,7 +108,7 @@ class Client:
                     sender: str = message[4:4+sender_lenght].decode('utf-8')
                     message_text: str = message[4+sender_lenght:].decode('utf-8')
 
-                    print(f'Получено сообщение от: {sender}: {message_text}')
+                    self.__backend.message_received(sender, message_text)
 
                     self.__receiving_message_handle()  # снова читаем пакет, чтобы соблюсти очередность
 

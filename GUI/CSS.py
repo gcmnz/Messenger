@@ -38,7 +38,6 @@ AUTHORIZATION_STYLE = """
 """
 
 MESSAGING_STYLE = """
-    
 """
 
 MESSAGING_STYLEs = """

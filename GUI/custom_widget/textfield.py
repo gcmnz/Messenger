@@ -2,7 +2,21 @@ from PyQt5.QtWidgets import QLineEdit
 
 
 class AuthorizationTextField(QLineEdit):
-    def __init__(self, window, text: str) -> None:
-        super().__init__(window)
+    def __init__(self, text: str) -> None:
+        super().__init__()
+
+        self.setPlaceholderText(text)
+
+
+class EnterMessageTextField(QLineEdit):
+    def __init__(self, text: str) -> None:
+        super().__init__()
+
+        self.setPlaceholderText(text)
+
+
+class SearchUserTextField(QLineEdit):
+    def __init__(self, text: str) -> None:
+        super().__init__()
 
         self.setPlaceholderText(text)

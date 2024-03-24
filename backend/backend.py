@@ -103,12 +103,21 @@ class Backend:
         """
         Метод для отправки запроса с получателем и текстом сообщения на сервер
         """
-        print(123)
-        receiver = self.__window.messaging_widget.receiver.text()
-        message = self.__window.messaging_widget.message.text()
+        messaging_widget = self.__window.messaging_widget
 
-        if receiver and message:
-            self.client.send_message(receiver, message)
+        if messaging_widget.interlocutors_widget.list_interlocutor.currentItem() is not None:  # Если выбрали получателя
+            receiver = messaging_widget.interlocutors_widget.list_interlocutor.currentItem().interlocutor
+            message = messaging_widget.messages_widget.enter_message_textfield.text()
+
+            if message:
+                messaging_widget.messages_widget.message_sended(message)
+                self.client.send_message(receiver, message)
+
+    def message_received(self, sender: str, message: str):
+        self.__window.messaging_widget.on_message_received(sender, message)
+
+    def on_interlocutor_change(self, current_interlocutor):
+        self.__window.messaging_widget.messages_widget.set_messages(current_interlocutor.messages, current_interlocutor.is_sender)
 
     @check_connection_status_without_hide
     def load_all_messages(self) -> None:
@@ -118,13 +127,15 @@ class Backend:
         self.client.send_load_messages_request()
 
     def load_messages_from_server(self, messages: dict):
+        list_interlocutor = self.__window.messaging_widget.interlocutors_widget.list_interlocutor
         for interlocutor in messages:
-            item = ListItem(interlocutor)
-            msg_item = ListItem(interlocutor)
-            self.__window.messaging_widget.list_interlocutor.addItem(item)
-            self.__window.messaging_widget.list_messages.addItem(msg_item)
-            # for message in messages[interlocutor]:
-            #     print(message)
+            item = ListItem(interlocutor, messages[interlocutor][:-1], messages[interlocutor][-1])
+            list_interlocutor.addItem(item)
+
+        list_interlocutor.setCurrentItem(list_interlocutor.item(0))
+
+    def find_users(self, text):
+        print(f'Ищем: {text}')
 
     def show_notification(self, text: str = 'Connection lost') -> None:
         """
@@ -139,4 +150,3 @@ class Backend:
         """
         self.__window.authorization_widget.notification.setVisible(False)
         self.__window.registration_widget.notification.setVisible(False)
-        self.__window.messaging_widget.notification.setVisible(False)

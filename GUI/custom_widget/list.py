@@ -6,11 +6,10 @@ class ListInterlocutor(QListWidget):
         super().__init__()
 
 
-class ListMessages(QListWidget):
-    def __init__(self):
-        super().__init__()
-
-
 class ListItem(QListWidgetItem):
-    def __init__(self, text: str):
-        super().__init__(text)
+    def __init__(self, interlocutor: str, messages: list[tuple], is_sender: int):
+        super().__init__(interlocutor)
+
+        self.interlocutor = interlocutor
+        self.messages = messages
+        self.is_sender = is_sender

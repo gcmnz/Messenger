@@ -60,6 +60,8 @@ class Client:
             try:
                 if self.__sent_message.bytes()[0] == self.__sent_message.CLOSE:
                     self.__connection_status = False
+                    self.__server.send(self.__sent_message.bytes())
+                    break
 
                 self.__server.send(self.__sent_message.bytes())
                 self.__sent_message.update(self.__PKT_HEARTBEAT)
@@ -68,10 +70,9 @@ class Client:
 
                 time.sleep(self.__sent_message.timeout())
 
-            except ConnectionResetError:  # Для безопасного закрытия соединения при резком завершении работы сервера
+            except ConnectionAbortedError:  # Для безопасного закрытия соединения при резком завершении работы сервера
                 self.__connection_status = False
 
-        time.sleep(Message.timeout())
         self.__server.close()
 
     def __receiving_message_handle(self) -> None:

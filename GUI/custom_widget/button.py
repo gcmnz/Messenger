@@ -32,3 +32,8 @@ class MessageButton(QPushButton):
         super().__init__()
 
         self.setText(text)
+
+    def line_break(self, strings_count: int) -> None:
+        current_text = self.text()
+        for string_num in range(strings_count):
+            print(current_text[string_num])

@@ -134,8 +134,10 @@ class Backend:
 
         list_interlocutor.setCurrentItem(list_interlocutor.item(0))
 
-    def find_users(self, text):
+    def find_users(self, text: str) -> None:
         print(f'Ищем: {text}')
+
+        # self.__window.messaging_widget.interlocutors_widget.list_interlocutor.addItems(['124'])
 
     def show_notification(self, text: str = 'Connection lost') -> None:
         """

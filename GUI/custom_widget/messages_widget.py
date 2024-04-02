@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QWidget, QScrollArea, QVBoxLayout, QHBoxLayout
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QScrollArea
 from PyQt5.QtCore import Qt, QTimer
 
 from .textfield import EnterMessageTextField
@@ -66,3 +66,18 @@ class MessagesWidget(QWidget):
             child = self.__scroll_layout.takeAt(0)
             if child.widget():
                 child.widget().deleteLater()
+
+    # def resizeEvent(self, a0):
+    #     layout = self.__scroll_layout
+    #     message_count = layout.count()
+    #     for i in range(message_count):
+    #         item = layout.itemAt(i)
+    #         if item.widget():  # Проверка, что элемент макета является виджетом
+    #             message_button = item.widget()
+    #             font_metrics = message_button.fontMetrics()
+    #             message_button_width = font_metrics.boundingRect(message_button.text()).width()
+    #             layout_width = self.__scroll_area.size().width()
+    #
+    #             if message_button_width > layout_width:
+    #                 strings_count = message_button_width // layout_width + 1
+    #                 message_button.line_break(strings_count)

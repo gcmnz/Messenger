@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 
 from .client import Client
@@ -106,11 +107,17 @@ class Backend:
         messaging_widget = self.__window.messaging_widget
 
         if messaging_widget.interlocutors_widget.list_interlocutor.currentItem() is not None:  # Если выбрали получателя
-            receiver = messaging_widget.interlocutors_widget.list_interlocutor.currentItem().interlocutor
-            message = messaging_widget.messages_widget.enter_message_textfield.text()
+            receiver: str = messaging_widget.interlocutors_widget.list_interlocutor.currentItem().interlocutor
+            message: str = messaging_widget.messages_widget.enter_message_textfield.text()
 
             if message:
                 messaging_widget.messages_widget.message_sended(message)
+
+                date = datetime.now().strftime('%Y.%m.%d')
+                time_ = str(datetime.now().time())
+                interlocutor_message = ('1', message, date, time_)
+
+                messaging_widget.interlocutors_widget.list_interlocutor.currentItem().messages.append(tuple(interlocutor_message))
                 self.client.send_message(receiver, message)
 
     def message_received(self, sender: str, message: str):
@@ -153,7 +160,7 @@ class Backend:
 
     def display_found_users(self, users_array: list[tuple[str]], login: str) -> None:
         users_array = [user for user in users_array if login not in user]
-        self.__window.messaging_widget.interlocutors_widget.list_interlocutor.sort(users_array)
+        self.__window.messaging_widget.interlocutors_widget.list_interlocutor.sort_by_searching(users_array)
 
     def show_notification(self, text: str = 'Connection lost') -> None:
         """

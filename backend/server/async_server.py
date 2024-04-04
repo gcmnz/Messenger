@@ -29,7 +29,7 @@ class Server:
         bytearray([0x03, 0x02, 0x03, 0x00, 0x06]))
     __PKT_RESPONCE_MESSAGE_SEND_FAIL_SEND_TO_SELF = (
         bytearray([0x03, 0x02, 0x03, 0x00, 0x07]))
-    __PKT_RESPONCE_MESSAGE_SEND_SENDED = (
+    __PKT_RESPONCE_MESSAGE_SEND_SUCCESS_SENDED = (
         bytearray([0x03, 0x02, 0x03, 0x01, 0x08]))
     __PKT_RESPONCE_MESSAGE_RECEIVE = (
         bytearray([0x03, 0x02, 0x04])
@@ -128,7 +128,7 @@ class Server:
                         else:
                             sender = current_login
                             self.__messages_database.add_message(sender, receiver, message_)
-                            sent_message.update(self.__PKT_RESPONCE_MESSAGE_SEND_SENDED)
+                            sent_message.update(self.__PKT_RESPONCE_MESSAGE_SEND_SUCCESS_SENDED)
 
                             if receiver in self.__online_users:
                                 msg = Message(self.__PKT_RESPONCE_MESSAGE_RECEIVE)
@@ -143,22 +143,7 @@ class Server:
 
                         # Подготовка заголовка
                         msg_pkt = self.__PKT_RESPONCE_MESSAGE_GETALL
-
-                        # Расчет количества частей
-                        parts_count = len(payload) // (Message.BUFFER_SIZE - len(msg_pkt) - 3) + 1
-                        parts_ct = bytearray(parts_count.to_bytes(3, byteorder='little'))
-
-                        pkt = msg_pkt + parts_ct
-
-                        result_packet = bytearray()
-                        result_payload = bytearray()
-
-                        for i in range(parts_count):
-                            pl = payload[i * (Message.BUFFER_SIZE - len(msg_pkt) - 3):(i + 1) * (Message.BUFFER_SIZE - len(msg_pkt) - 3)]
-                            packet = (pkt + pl)
-                            result_packet += packet
-                            result_payload += pl
-                            writer.write(packet)
+                        self.__getall_handler(writer, msg_pkt, payload)
 
                 elif message[1] == received_message.USERS:
                     if message[2] == received_message.GETALL:
@@ -166,25 +151,9 @@ class Server:
                         found_nicknames = self.__accounts_database.get_all_users_by(nickname_to_find)
 
                         payload = pickle.dumps(found_nicknames)
-
-                        # Подготовка заголовка
                         msg_pkt = self.__PKT_RESPONCE_USERS_GETALL
 
-                        # Расчет количества частей
-                        parts_count = len(payload) // (Message.BUFFER_SIZE - len(msg_pkt) - 3) + 1
-                        parts_count_bytes = bytearray(parts_count.to_bytes(3, byteorder='little'))
-
-                        pkt = msg_pkt + parts_count_bytes
-
-                        result_packet = bytearray()
-                        result_payload = bytearray()
-
-                        for i in range(parts_count):
-                            pl = payload[i * (Message.BUFFER_SIZE - len(msg_pkt) - 3):(i + 1) * (Message.BUFFER_SIZE - len(msg_pkt) - 3)]
-                            packet = (pkt + pl)
-                            result_packet += packet
-                            result_payload += pl
-                            writer.write(packet)
+                        self.__getall_handler(writer, msg_pkt, payload)
 
             elif message[0] == received_message.CLOSE:
                 if current_login in self.__online_users:
@@ -201,6 +170,26 @@ class Server:
 
             writer.write(sent_message.bytes())
             sent_message.update(self.__PKT_HEARTBEAT)
+
+    @staticmethod
+    def __getall_handler(writer, msg_pkt, payload):
+        """
+        Метод для разбива пакетов на части и отправки после типа сообщения GETALL
+        """
+        parts_count = len(payload) // (Message.BUFFER_SIZE - len(msg_pkt) - 3) + 1
+        parts_ct = bytearray(parts_count.to_bytes(3, byteorder='little'))
+
+        pkt = msg_pkt + parts_ct
+
+        result_packet = bytearray()
+        result_payload = bytearray()
+
+        for i in range(parts_count):
+            pl = payload[i * (Message.BUFFER_SIZE - len(msg_pkt) - 3):(i + 1) * (Message.BUFFER_SIZE - len(msg_pkt) - 3)]
+            packet = (pkt + pl)
+            result_packet += packet
+            result_payload += pl
+            writer.write(packet)
 
 
 if __name__ == '__main__':

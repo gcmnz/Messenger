@@ -8,6 +8,13 @@ class AuthorizationTextField(QLineEdit):
         self.setPlaceholderText(text)
 
 
+class AuthorizationPasswordTextField(AuthorizationTextField):
+    def __init__(self, text: str):
+        super().__init__(text)
+
+        self.setEchoMode(QLineEdit.Password)
+
+
 class EnterMessageTextField(QLineEdit):
     def __init__(self, text: str) -> None:
         super().__init__()

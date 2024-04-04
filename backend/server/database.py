@@ -48,6 +48,10 @@ class Database:
         with self.connection:
             self.cursor.execute(f'DROP TABLE {table_name};')
 
+    def clear(self, table_name) -> None:
+        with self.connection:
+            self.cursor.execute(f"DELETE FROM {table_name}")
+
     def get_table_content(self, table_name: str):
         with self.connection:
             self.cursor.execute(f"SELECT * FROM {table_name}")
@@ -181,6 +185,3 @@ class MessageDatabase(Database):
 if __name__ == '__main__':
     # database = AccountDatabase()
     database = MessageDatabase()
-    # dct = database.get_all_messages_for('slavique')
-    # print(dct)
-    database.get_all_messages_for('slavique')

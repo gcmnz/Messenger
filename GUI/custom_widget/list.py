@@ -4,20 +4,49 @@ from PyQt5.QtWidgets import QListWidget, QListWidgetItem
 class ListInterlocutor(QListWidget):
     def __init__(self):
         super().__init__()
+        self.__current_items: list = []
 
-    def sort_by_searching(self, users: list[tuple[str]]) -> None:
-        for i in range(self.count()):
-            current_item = self.item(i)
+    def save_current_items(self):
+        self.__current_items = [self.item(i) for i in range(self.count())]
 
-            # noinspection PyUnresolvedReferences
-            if not any(current_item.interlocutor in user for user in users):
-                current_item.setHidden(True)
+    def sort_by_searching(self, users: list[str]) -> None:
+        """
+        Алгоритм сортировки пользователей и добавления items в listwidget
+        """
+        self.clear()
+
+        for user in users:
+            # Находим элемент в self.__current_items, у которого interlocutor равен user
+            found_item = next((item for item in self.__current_items if item.interlocutor == user), None)
+            if found_item:
+                # Создаем новый ListItem на основе найденного элемента
+                new_item = ListItem(found_item.interlocutor, found_item.messages, found_item.is_sender)
+                self.addItem(new_item)
             else:
-                current_item.setHidden(False)
+                list_item = ListItem(user, [], 0)
+                self.addItem(list_item)
 
-    def show_all_items(self) -> None:
-        for i in range(self.count()):
-            self.item(i).setHidden(False)
+    def restore_items(self) -> None:
+        """
+        Метод для отображения только тех пользователей, с которыми есть переписка (вызывается при пустом поле поиска)
+        """
+        self.clear()
+
+        for item in self.__current_items:
+            new_item = ListItem(item.interlocutor, item.messages, item.is_sender)
+            self.addItem(new_item)
+
+    def add_current_item(self, item) -> None:
+        """
+        Добавление новой переписки, при отправке сообщения только что найденному через поиск пользователю
+        """
+        self.__current_items.append(item)
+
+    def get_current_items(self) -> list:
+        """
+        Получение массива всех пользователей, с которыми есть переписка
+        """
+        return self.__current_items
 
 
 class ListItem(QListWidgetItem):

@@ -105,9 +105,9 @@ class Backend:
         Метод для отправки запроса с получателем и текстом сообщения на сервер
         """
         messaging_widget = self.__window.messaging_widget
-
-        if messaging_widget.interlocutors_widget.list_interlocutor.currentItem() is not None:  # Если выбрали получателя
-            receiver: str = messaging_widget.interlocutors_widget.list_interlocutor.currentItem().interlocutor
+        current_item = messaging_widget.interlocutors_widget.list_interlocutor.currentItem()
+        if current_item is not None:  # Если выбрали получателя
+            receiver: str = current_item.interlocutor
             message: str = messaging_widget.messages_widget.enter_message_textfield.text()
 
             if message:
@@ -115,9 +115,11 @@ class Backend:
 
                 date = datetime.now().strftime('%Y.%m.%d')
                 time_ = str(datetime.now().time())
-                interlocutor_message = ('1', message, date, time_)
+                interlocutor_message = ('0', message, date, time_)
+                if current_item not in messaging_widget.interlocutors_widget.list_interlocutor.get_current_items():
+                    messaging_widget.interlocutors_widget.list_interlocutor.add_current_item(current_item)
 
-                messaging_widget.interlocutors_widget.list_interlocutor.currentItem().messages.append(tuple(interlocutor_message))
+                current_item.messages.append(tuple(interlocutor_message))
                 self.client.send_message(receiver, message)
 
     def message_received(self, sender: str, message: str):
@@ -147,6 +149,7 @@ class Backend:
             list_interlocutor.addItem(item)
 
         list_interlocutor.setCurrentItem(list_interlocutor.item(0))
+        list_interlocutor.save_current_items()
 
     @check_connection_status_without_hide
     def find_users_by_nickname(self, nickname: str) -> None:
@@ -156,10 +159,14 @@ class Backend:
         if nickname:
             self.client.get_users_by_nickname_request(nickname)
         else:
-            self.__window.messaging_widget.interlocutors_widget.list_interlocutor.show_all_items()
+            self.__window.messaging_widget.interlocutors_widget.list_interlocutor.restore_items()
 
-    def display_found_users(self, users_array: list[tuple[str]], login: str) -> None:
-        users_array = [user for user in users_array if login not in user]
+    def display_found_users(self, users_array: list[str], login: str) -> None:
+        """
+        Метод для отображения искомых пользователей
+        """
+        if login in users_array:
+            users_array.remove(login)
         self.__window.messaging_widget.interlocutors_widget.list_interlocutor.sort_by_searching(users_array)
 
     def show_notification(self, text: str = 'Connection lost') -> None:

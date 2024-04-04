@@ -1,5 +1,5 @@
 from GUI.custom_widget.button import AuthorizationButton
-from GUI.custom_widget.textfield import AuthorizationTextField
+from GUI.custom_widget.textfield import AuthorizationTextField, AuthorizationPasswordTextField
 from GUI.custom_widget.label import AuthorizationLabel
 
 from PyQt5.QtWidgets import QWidget, QVBoxLayout
@@ -11,7 +11,7 @@ class Registration(QWidget):
         super().__init__()
 
         self.login = AuthorizationTextField('Login')
-        self.password = AuthorizationTextField('Password')
+        self.password = AuthorizationPasswordTextField('Password')
 
         self.enter = AuthorizationButton('Sign up', backend.create_account_button_func)
         self.create_account_button = AuthorizationButton('Have account', backend.change_to_authorization)

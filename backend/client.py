@@ -98,7 +98,7 @@ class Client:
 
             elif message[1] == recv_message.MESSAGE:
                 if message[2] == recv_message.SEND:
-                    print(123)
+                    pass
 
                 elif message[2] == recv_message.RECEIVE:  # Это сообщение сервер отправил без очереди
                     sender_lenght = message[3]
@@ -143,7 +143,9 @@ class Client:
                         payload = data[6:]
                         res += payload
 
-                    self.__backend.display_found_users(pickle.loads(res), self.__login)
+                    result_array: list[tuple[str]] = pickle.loads(res)
+
+                    self.__backend.display_found_users([user[0] for user in result_array], self.__login)
 
     def create_account(self, login: str, password: str) -> None:
         """

@@ -10,7 +10,7 @@ def check_connection_status_without_hide(func: staticmethod):
     """
     def wrapper(*args):
         if args[0].client.is_connected():
-            return func(args[0])
+            return func(*args)
         else:
             args[0].show_notification()
 
@@ -117,7 +117,11 @@ class Backend:
         self.__window.messaging_widget.on_message_received(sender, message)
 
     def on_interlocutor_change(self, current_interlocutor):
-        self.__window.messaging_widget.messages_widget.set_messages(current_interlocutor.messages, current_interlocutor.is_sender)
+        """
+        Метод для обновления сообщений на виджете после нажатия на QListItem с другим собеседником
+        """
+        if current_interlocutor:
+            self.__window.messaging_widget.messages_widget.set_messages(current_interlocutor.messages, current_interlocutor.is_sender)
 
     @check_connection_status_without_hide
     def load_all_messages(self) -> None:
@@ -126,18 +130,30 @@ class Backend:
         """
         self.client.send_load_messages_request()
 
-    def load_messages_from_server(self, messages: dict):
+    def display_messages_from_server_after_loading(self, loaded_messages: dict) -> None:
+        """
+        Метод для создания QListItems в списке собеседников
+        """
         list_interlocutor = self.__window.messaging_widget.interlocutors_widget.list_interlocutor
-        for interlocutor in messages:
-            item = ListItem(interlocutor, messages[interlocutor][:-1], messages[interlocutor][-1])
+        for interlocutor in loaded_messages:
+            item = ListItem(interlocutor, loaded_messages[interlocutor][:-1], loaded_messages[interlocutor][-1])
             list_interlocutor.addItem(item)
 
         list_interlocutor.setCurrentItem(list_interlocutor.item(0))
 
-    def find_users(self, text: str) -> None:
-        print(f'Ищем: {text}')
+    @check_connection_status_without_hide
+    def find_users_by_nickname(self, nickname: str) -> None:
+        """
+        Вызов метода клиента для отправки запроса на получение всех аккаунтов, схожих в nickname
+        """
+        if nickname:
+            self.client.get_users_by_nickname_request(nickname)
+        else:
+            self.__window.messaging_widget.interlocutors_widget.list_interlocutor.show_all_items()
 
-        # self.__window.messaging_widget.interlocutors_widget.list_interlocutor.addItems(['124'])
+    def display_found_users(self, users_array: list[tuple[str]], login: str) -> None:
+        users_array = [user for user in users_array if login not in user]
+        self.__window.messaging_widget.interlocutors_widget.list_interlocutor.sort(users_array)
 
     def show_notification(self, text: str = 'Connection lost') -> None:
         """

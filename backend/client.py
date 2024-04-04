@@ -18,6 +18,9 @@ class Client:
     __PKT_REQUEST_MESSAGE_SEND = bytearray([0x02, 0x02, 0x03])
     __PKT_REQUEST_MESSAGE_GETALL = bytearray([0x02, 0x02, 0x05])
 
+    # Users
+    __PKT_REQUEST_USERS_GETALL = bytearray([0x02, 0x03, 0x05])
+
     def __init__(self, backend, host: str, port: int) -> None:
         self.__backend = backend
         self.__HOST = host
@@ -27,7 +30,8 @@ class Client:
 
         self.__sent_message = Message(self.__PKT_HEARTBEAT)
         self.__received_message = Message()
-        self.__all_messages = ([])
+
+        self.__login = None
 
     def connect(self) -> None:
         """
@@ -42,7 +46,7 @@ class Client:
         try:
             self.__server.connect((self.__HOST, self.__PORT))
             self.__connection_status = True
-            threading.Thread(target=self.communicating).start()
+            threading.Thread(target=self.__sending_message_handle).start()
         except ConnectionRefusedError:
             self.__connection_status = False
 
@@ -52,7 +56,7 @@ class Client:
         """
         self.__sent_message.update(self.__PKT_CLOSE)
 
-    def communicating(self) -> None:
+    def __sending_message_handle(self) -> None:
         """
         Поток обмена пакетами с сервером
         """
@@ -85,14 +89,7 @@ class Client:
 
         if message[0] == recv_message.RESPONSE:
             if message[1] == recv_message.ACCOUNT:
-                if message[2] == recv_message.CREATE:
-                    if message[3] == recv_message.SUCCESS:
-                        self.__backend.change_to_messaging()
-                    else:
-                        notification = recv_message.decode_responce_account_unsuccess()
-                        self.__backend.show_notification(notification)
-
-                elif message[2] == recv_message.ENTER:
+                if message[2] == recv_message.CREATE or message[2] == recv_message.ENTER:
                     if message[3] == recv_message.SUCCESS:
                         self.__backend.change_to_messaging()
                     else:
@@ -101,7 +98,7 @@ class Client:
 
             elif message[1] == recv_message.MESSAGE:
                 if message[2] == recv_message.SEND:
-                    pass
+                    print(123)
 
                 elif message[2] == recv_message.RECEIVE:  # Это сообщение сервер отправил без очереди
                     sender_lenght = message[3]
@@ -128,12 +125,32 @@ class Client:
                         payload = data[6:]
                         res += payload
 
-                    self.__backend.load_messages_from_server(pickle.loads(res))
+                    self.__backend.display_messages_from_server_after_loading(pickle.loads(res))
+
+            elif message[1] == recv_message.USERS:
+                if message[2] == recv_message.GETALL:
+                    res = bytearray()
+
+                    data = recv_message.bytes()
+
+                    parts_count = int.from_bytes(data[3:6], byteorder='little')
+
+                    payload = data[6:]
+                    res += payload
+
+                    for i in range(parts_count - 1):
+                        data = bytearray(self.__server.recv(Message.BUFFER_SIZE))
+                        payload = data[6:]
+                        res += payload
+
+                    self.__backend.display_found_users(pickle.loads(res), self.__login)
 
     def create_account(self, login: str, password: str) -> None:
         """
         Метод для формирования пакета с запросом создания аккаунта
         """
+        self.__login = login
+
         login_length = bytearray(len(login).to_bytes(1, 'big'))
 
         login_text = bytearray(login.encode('utf-8'))
@@ -147,6 +164,8 @@ class Client:
         """
         Метод для формирования пакета с запросом об авторизации
         """
+        self.__login = login
+
         login_length = bytearray(len(login).to_bytes(1, 'big'))
 
         login_text = bytearray(login.encode('utf-8'))
@@ -168,11 +187,23 @@ class Client:
         pkt = self.__PKT_REQUEST_MESSAGE_SEND + receiver_length + receiver_text + message_text
         self.__sent_message.update(pkt)
 
-    def send_load_messages_request(self):
+    def send_load_messages_request(self) -> None:
         """
         Метод для формирования пакета с запросом о получении сообщений
         """
         self.__sent_message.update(self.__PKT_REQUEST_MESSAGE_GETALL)
+
+    def get_users_by_nickname_request(self, nickname: str) -> None:
+        """
+        Метод для формирования запроса на получение пользователей по введённому логину в строке search
+        """
+        nickname_text = bytearray(nickname.encode('utf-8'))
+
+        pkt = self.__PKT_REQUEST_USERS_GETALL + nickname_text
+        self.__sent_message.update(pkt)
+
+    def handle_responce(self, message: bytearray):
+        pass
 
     def is_connected(self) -> bool:
         """

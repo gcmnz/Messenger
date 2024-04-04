@@ -38,6 +38,11 @@ class Server:
         bytearray([0x03, 0x02, 0x05])
     )
 
+    # Users
+    __PKT_RESPONCE_USERS_GETALL = (
+        bytearray([0x03, 0x03, 0x05])
+    )
+
     def __init__(self, host: str, port: int) -> None:
         self.__HOST: str = host
         self.__PORT: int = port
@@ -59,7 +64,10 @@ class Server:
             await self.__server.wait_closed()
             print(f"Server stopped: {self.__HOST} | {self.__PORT}")
 
-    async def start(self) -> None:
+    def start(self) -> None:
+        asyncio.run(self.__async_start())
+
+    async def __async_start(self) -> None:
         print(f'Server started: {self.__HOST} | {self.__PORT}')
         self.__server = await asyncio.start_server(self.handle_client, self.__HOST, self.__PORT)
         async with self.__server:
@@ -130,6 +138,7 @@ class Server:
 
                     elif message[2] == received_message.GETALL:
                         data_dict = self.__messages_database.get_all_messages_for(current_login)
+
                         payload = bytearray(pickle.dumps(data_dict))
 
                         # Подготовка заголовка
@@ -145,7 +154,33 @@ class Server:
                         result_payload = bytearray()
 
                         for i in range(parts_count):
-                            pl = payload[i * (Message.BUFFER_SIZE - 6):(i + 1) * (Message.BUFFER_SIZE - 6)]
+                            pl = payload[i * (Message.BUFFER_SIZE - len(msg_pkt) - 3):(i + 1) * (Message.BUFFER_SIZE - len(msg_pkt) - 3)]
+                            packet = (pkt + pl)
+                            result_packet += packet
+                            result_payload += pl
+                            writer.write(packet)
+
+                elif message[1] == received_message.USERS:
+                    if message[2] == received_message.GETALL:
+                        nickname_to_find = received_message.decode_responce_users_getall()
+                        found_nicknames = self.__accounts_database.get_all_users_by(nickname_to_find)
+
+                        payload = pickle.dumps(found_nicknames)
+
+                        # Подготовка заголовка
+                        msg_pkt = self.__PKT_RESPONCE_USERS_GETALL
+
+                        # Расчет количества частей
+                        parts_count = len(payload) // (Message.BUFFER_SIZE - len(msg_pkt) - 3) + 1
+                        parts_count_bytes = bytearray(parts_count.to_bytes(3, byteorder='little'))
+
+                        pkt = msg_pkt + parts_count_bytes
+
+                        result_packet = bytearray()
+                        result_payload = bytearray()
+
+                        for i in range(parts_count):
+                            pl = payload[i * (Message.BUFFER_SIZE - len(msg_pkt) - 3):(i + 1) * (Message.BUFFER_SIZE - len(msg_pkt) - 3)]
                             packet = (pkt + pl)
                             result_packet += packet
                             result_payload += pl
@@ -173,4 +208,4 @@ if __name__ == '__main__':
         config = json.load(f)
 
     async_server = Server(config['ip'], config['port'])
-    asyncio.run(async_server.start())
+    async_server.start()

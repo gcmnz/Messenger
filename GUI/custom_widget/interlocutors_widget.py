@@ -9,7 +9,7 @@ class InterlocutorsWidget(QWidget):
         super().__init__()
 
         self.search_user = SearchUserTextField('Search')
-        self.search_user.textChanged[str].connect(backend.find_users)
+        self.search_user.textChanged[str].connect(backend.find_users_by_nickname)
 
         self.list_interlocutor = ListInterlocutor()
         # noinspection PyUnresolvedReferences

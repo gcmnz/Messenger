@@ -9,11 +9,12 @@ class Message:
     RESPONSE = 3
     CLOSE = 4
 
-    # 2 byte - subtype
+    # 2 byte
     ACCOUNT = 1
     MESSAGE = 2
+    USERS = 3
 
-    # 3 byte - subsubtype
+    # 3 byte
     CREATE = 1
     ENTER = 2
     SEND = 3
@@ -102,6 +103,13 @@ class Message:
         pkt = self.__packet
         sender_length = int.to_bytes(len(sender), 1, byteorder='little')
         self.__packet = pkt + sender_length + sender.encode('utf-8') + message.encode('utf-8')
+
+    def decode_responce_users_getall(self) -> str:
+        """
+        Метод для получения искомого nickname из пакета
+        """
+        pkt = self.__packet
+        return pkt[3:].decode('utf-8')
 
     @classmethod
     def timeout(cls):

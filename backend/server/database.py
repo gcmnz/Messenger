@@ -103,6 +103,15 @@ class AccountDatabase(Database):
             return 1
         return 0
 
+    def get_all_users_by(self, desired_login: str) -> list[str]:
+        """
+        Метод возвращает список из пользователей, в логинах которых есть desired_login
+        """
+        with self.connection:
+            result = self.cursor.execute(f"SELECT login FROM accounts WHERE login LIKE '{desired_login}%'").fetchall()
+
+        return result
+
 
 class MessageDatabase(Database):
     """
@@ -161,7 +170,7 @@ class MessageDatabase(Database):
             result: dict = {}
 
             for table in tables:
-                interlocutor = table.replace(login, '').replace('_', '')
+                interlocutor = list(set(table.split('_')) - {login})[0]
                 content = self.get_table_content(table)
                 content.append(int(login == table.split('_')[0]))
                 result[interlocutor] = content
@@ -172,5 +181,6 @@ class MessageDatabase(Database):
 if __name__ == '__main__':
     # database = AccountDatabase()
     database = MessageDatabase()
-    dct = database.get_all_messages_for('slavique')
-    print(dct)
+    # dct = database.get_all_messages_for('slavique')
+    # print(dct)
+    database.get_all_messages_for('slavique')

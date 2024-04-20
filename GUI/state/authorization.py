@@ -13,6 +13,9 @@ class Authorization(QWidget):
         self.login = AuthorizationTextField('Login')
         self.password = AuthorizationPasswordTextField('Password')
 
+        self.login.setText('slavique')
+        self.password.setText('ez')
+
         self.enter = AuthorizationButton('Sign in', backend.enter_account_button_func)
         self.create_account_button = AuthorizationButton('Create account', backend.change_to_registration)
 

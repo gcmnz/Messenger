@@ -8,10 +8,8 @@ import sys
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-
         self.setMinimumSize(300, 300)
         self.setGeometry(500, 400, 800, 500)
-        self.setMaximumSize(800, 600)
 
         self.setStyleSheet(WINDOW_STYLE + AUTHORIZATION_STYLE + MESSAGING_STYLE)
 

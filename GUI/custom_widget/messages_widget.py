@@ -11,9 +11,10 @@ class MessagesWidget(QWidget):
 
         # Создание виджета, который будет содержать содержимое QScrollArea
         self.__scroll_content = QWidget()
+        self.__scroll_content.setStyleSheet('background-color: rgb(27, 39, 52);')
         self.__scroll_layout = QVBoxLayout(self.__scroll_content)
         self.__scroll_layout.setSpacing(0)  # Установка минимального пространства между виджетами
-        self.__scroll_layout.setAlignment(Qt.AlignBottom)  # Выравнивание кнопок по правому краю
+        self.__scroll_layout.setAlignment(Qt.AlignBottom)
 
         self.enter_message_textfield = EnterMessageTextField('Write a message...')
         self.__send_message_button = SendMessageButton('Отправить', backend.send_message_button_func)
@@ -54,7 +55,7 @@ class MessagesWidget(QWidget):
 
     def __scroll_to_bottom(self):
         scroll_bar = self.__scroll_area.verticalScrollBar()
-        QTimer.singleShot(20, lambda: scroll_bar.setValue(scroll_bar.maximum()))
+        QTimer.singleShot(5, lambda: scroll_bar.setValue(scroll_bar.maximum()))
 
     def message_sended(self, message: str):
         self.enter_message_textfield.setText('')

@@ -1,9 +1,12 @@
 from PyQt5.QtWidgets import QListWidget, QListWidgetItem
+from PyQt5.Qt import Qt
 
 
 class ListInterlocutor(QListWidget):
     def __init__(self):
         super().__init__()
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
         self.__current_items: list = []
 
     def save_current_items(self):

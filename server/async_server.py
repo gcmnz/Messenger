@@ -1,7 +1,6 @@
 import pickle
-import socket
-import threading
 import json
+import asyncio
 
 from database import AccountDatabase, MessageDatabase
 from backend.message import Message
@@ -30,7 +29,7 @@ class Server:
         bytearray([0x03, 0x02, 0x03, 0x00, 0x06]))
     __PKT_RESPONCE_MESSAGE_SEND_FAIL_SEND_TO_SELF = (
         bytearray([0x03, 0x02, 0x03, 0x00, 0x07]))
-    __PKT_RESPONCE_MESSAGE_SEND_SENDED = (
+    __PKT_RESPONCE_MESSAGE_SEND_SUCCESS_SENDED = (
         bytearray([0x03, 0x02, 0x03, 0x01, 0x08]))
     __PKT_RESPONCE_MESSAGE_RECEIVE = (
         bytearray([0x03, 0x02, 0x04])
@@ -39,59 +38,54 @@ class Server:
         bytearray([0x03, 0x02, 0x05])
     )
 
+    # Users
+    __PKT_RESPONCE_USERS_GETALL = (
+        bytearray([0x03, 0x03, 0x05])
+    )
+
     def __init__(self, host: str, port: int) -> None:
         self.__HOST: str = host
         self.__PORT: int = port
         self.__starting: bool = False
-        self.__server: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # TCP
+
+        self.__server = None
 
         self.__accounts_database = AccountDatabase()
         self.__messages_database = MessageDatabase()
 
         self.__online_users: dict = {}
 
-    def __del__(self) -> None:
-        self.stop()
+    async def stop(self) -> None:
+        if self.__server is not None:
+            self.__server.close()
+            await self.__server.wait_closed()
+            print(f"Server stopped: {self.__HOST} | {self.__PORT}")
 
     def start(self) -> None:
-        """
-        Запуск сервера и приёма подключений
-        """
+        asyncio.run(self.__async_start())
+
+    async def __async_start(self) -> None:
         print(f'Server started: {self.__HOST} | {self.__PORT}')
-        self.__server.bind((self.__HOST, self.__PORT))
-        self.__server.listen()
-        self.__starting = True
-        self.connection_listener()
+        self.__server = await asyncio.start_server(self.handle_client, self.__HOST, self.__PORT)
+        async with self.__server:
+            await self.__server.serve_forever()
 
-    def stop(self) -> None:
-        print(f'Server closed: {self.__HOST} | {self.__PORT}')
-        self.__starting = False
-        self.__server.close()
-
-    def connection_listener(self) -> None:
-        """
-        Метод для отслеживания подключений
-        """
-        while self.__starting:
-            client, addr = self.__server.accept()
-            threading.Thread(target=self.communicating_thread, args=(client, addr)).start()
-
-    def communicating_thread(self, client: socket.socket, addr: tuple):
-        self.communicating(client, addr)
-
-    def communicating(self, client: socket.socket, addr: tuple) -> None:
-        """
-        Метод, реагирующий на подключение и взаимодействующий с клиентом в отдельном потоке (N подключений = N потоков)
-        """
-        print(f'{addr} Successfully connected!')
+    async def handle_client(self, reader, writer) -> None:
+        # Получаем информацию о соединении
+        peername = writer.get_extra_info('peername')
+        if peername is not None:
+            ip, port = peername
+            print(f"Client connected: {ip}:{port}")
+        else:
+            ip, port = None, None
+            print("Client connected, but could not get IP address")
 
         received_message = Message()
         sent_message = Message(self.__PKT_HEARTBEAT)
         current_login = None
 
-        user_connected = True
-        while user_connected:
-            received_message.update(client.recv(received_message.BUFFER_SIZE))
+        while True:
+            received_message.update((await reader.read(received_message.BUFFER_SIZE)))
             message = received_message.bytes()
 
             if message[0] == received_message.REQUEST:
@@ -104,7 +98,7 @@ class Server:
                             self.__accounts_database.add_user(login, password)
                             sent_message.update(self.__PKT_RESPONCE_ACCOUNT_CREATE_SUCCESS_CREATED)
                             current_login = login
-                            self.__online_users[login] = client
+                            self.__online_users[login] = reader
                         else:
                             sent_message.update(self.__PKT_RESPONCE_ACCOUNT_CREATE_FAIL_ALREADY_EXISTS)
 
@@ -114,7 +108,7 @@ class Server:
                         if success == 2:
                             sent_message.update(self.__PKT_RESPONCE_ACCOUNT_ENTER_SUCCESS_PASSED)
                             current_login = login
-                            self.__online_users[login] = client
+                            self.__online_users[login] = reader
                         elif success == 1:
                             sent_message.update(self.__PKT_RESPONCE_ACCOUNT_ENTER_FAIL_INVALID_PASSWORD)
                         elif success == 0:
@@ -131,7 +125,7 @@ class Server:
                         else:
                             sender = current_login
                             self.__messages_database.add_message(sender, receiver, message_)
-                            sent_message.update(self.__PKT_RESPONCE_MESSAGE_SEND_SENDED)
+                            sent_message.update(self.__PKT_RESPONCE_MESSAGE_SEND_SUCCESS_SENDED)
 
                             if receiver in self.__online_users:
                                 msg = Message(self.__PKT_RESPONCE_MESSAGE_RECEIVE)
@@ -141,42 +135,67 @@ class Server:
 
                     elif message[2] == received_message.GETALL:
                         data_dict = self.__messages_database.get_all_messages_for(current_login)
+
                         payload = bytearray(pickle.dumps(data_dict))
 
                         # Подготовка заголовка
                         msg_pkt = self.__PKT_RESPONCE_MESSAGE_GETALL
+                        self.__getall_handler(writer, msg_pkt, payload)
 
-                        # Расчет количества частей
-                        parts_count = len(payload) // (Message.BUFFER_SIZE - len(msg_pkt) - 3) + 1
-                        parts_ct = bytearray(parts_count.to_bytes(3, byteorder='little'))
+                elif message[1] == received_message.USERS:
+                    if message[2] == received_message.GETALL:
+                        nickname_to_find = received_message.decode_responce_users_getall()
+                        found_nicknames = self.__accounts_database.get_all_users_by(nickname_to_find)
 
-                        pkt = msg_pkt + parts_ct
+                        payload = pickle.dumps(found_nicknames)
+                        msg_pkt = self.__PKT_RESPONCE_USERS_GETALL
 
-                        result_packet = bytearray()
-                        result_payload = bytearray()
-
-                        for i in range(parts_count):
-                            pl = payload[i * (Message.BUFFER_SIZE - 6):(i + 1) * (Message.BUFFER_SIZE - 6)]
-                            packet = (pkt + pl)
-                            result_packet += packet
-                            result_payload += pl
-                            client.send(packet)
+                        self.__getall_handler(writer, msg_pkt, payload)
 
             elif message[0] == received_message.CLOSE:
-                user_connected = False
-
                 if current_login in self.__online_users:
                     del self.__online_users[current_login]
 
-                print(f'{addr} Disconnected!')
+                await writer.drain()
+                writer.close()
 
-            client.send(sent_message.bytes())
+                if ip:
+                    print(f"Client disconnected: {ip}:{port}")
+                else:
+                    print('Client disconnected: unknown')
+                break
+
+            writer.write(sent_message.bytes())
             sent_message.update(self.__PKT_HEARTBEAT)
 
+    @staticmethod
+    def __getall_handler(writer, msg_pkt, payload):
+        """
+        Метод для разбива пакетов на части и отправки после типа сообщения GETALL
+        """
+        parts_count = len(payload) // (Message.BUFFER_SIZE - len(msg_pkt) - 3) + 1
+        parts_ct = bytearray(parts_count.to_bytes(3, byteorder='little'))
 
-if __name__ == '__main__':
-    with open('../../config.json') as f:
+        pkt = msg_pkt + parts_ct
+
+        result_packet = bytearray()
+        result_payload = bytearray()
+
+        for i in range(parts_count):
+            pl = payload[i * (Message.BUFFER_SIZE - len(msg_pkt) - 3):(i + 1) * (Message.BUFFER_SIZE - len(msg_pkt) - 3)]
+            packet = (pkt + pl)
+            result_packet += packet
+            result_payload += pl
+            writer.write(packet)
+
+
+def main() -> None:
+    with open('../config.json') as f:
         config = json.load(f)
 
     server = Server(config['ip'], config['port'])
     server.start()
+
+
+if __name__ == '__main__':
+    main()
